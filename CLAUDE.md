@@ -1,187 +1,199 @@
-# VSCode LM Proxy 開発ガイド
+# VSCode LM Proxy Development Guide
 
-このファイルは、VSCode LM Proxyプロジェクトのコードを扱う際にClaude Code（claude.ai/code）やその他のAIアシスタントに開発指針を提供します。
+This file provides development guidelines to Claude Code (claude.ai/code) and other AI assistants when working with the VSCode LM Proxy project code.
 
-## プロジェクト概要
+## Project Overview
 
-VSCode LM Proxy は VSCode の Language Model API を OpenAI/Anthropic 互換の REST API として公開する拡張機能です。
-これにより外部アプリケーションから VSCode の Language Model API を簡単に利用できるようになります。
+VSCode LM Proxy is an extension that exposes VSCode's Language Model API as an OpenAI/Anthropic-compatible REST API.
+This allows external applications to easily utilize VSCode's Language Model API.
 
-## 技術スタック
+## Technology Stack
 
-- **TypeScript**: 5.8.3（厳格な型付け）
-- **VSCode API**: 1.101.0以上
-- **Express**: 4.21.2（REST APIサーバー）
+- **TypeScript**: 5.8.3 (strict typing)
+- **VSCode API**: 1.101.0 or later
+- **Express**: 4.21.2 (REST API server)
 - **Node.js**: 20.x
-- **Biome**: 2.0.5（リンターとフォーマッター）
+- **Biome**: 2.0.5 (linter and formatter)
 
-## 開発コマンド
+## Development Commands
 
 ```bash
-# 開発
-npm run compile          # TypeScriptをコンパイル
-npm run watch           # 監視モードでコンパイル
+# Development
+npm run compile          # Compile TypeScript
+npm run watch           # Compile in watch mode
 
-# コード品質
-npm run check           # Biomeリンターを実行
-biome check --write     # リントの問題を自動修正
+# Code Quality
+npm run check           # Run Biome linter
+biome check --write     # Auto-fix lint issues
 
-# パッケージング
-npm run vscode:prepublish  # 拡張機能のビルド（公開前）
+# Packaging
+npm run vscode:prepublish  # Build extension (before publishing)
 ```
 
-## プロジェクト構造
+## Project Structure
 
 ```
 src/
-├── extension.ts              # 拡張機能エントリーポイント
-├── commands/                 # VSCodeコマンド実装
-│   ├── index.ts             # コマンド一括登録
-│   ├── model.ts             # モデル選択コマンド
-│   ├── output.ts            # 出力パネルコマンド
-│   └── server.ts            # サーバー制御コマンド
-├── converter/               # API形式変換
-│   ├── anthropicConverter.ts # Anthropic API変換
-│   └── openaiConverter.ts   # OpenAI API変換
-├── model/                   # モデル管理
-│   └── manager.ts           # モデル選択・管理
-├── server/                  # REST APIサーバー
-│   ├── server.ts            # Expressサーバー設定
-│   ├── manager.ts           # サーバー起動・停止
-│   ├── handler.ts           # 共通ハンドラー
-│   ├── openaiHandler.ts     # OpenAI API互換エンドポイント
-│   ├── anthropicHandler.ts  # Anthropic API互換エンドポイント
-│   └── claudeCodeHandler.ts # Claude Code互換エンドポイント
-├── ui/                      # UIコンポーネント
-│   └── statusbar.ts         # ステータスバー管理
-└── utils/                   # ユーティリティ
-    ├── index.ts             # ユーティリティ関数
-    └── logger.ts            # ログ機能
+├── extension.ts              # Extension entry point
+├── commands/                 # VSCode command implementations
+│   ├── index.ts             # Batch command registration
+│   ├── model.ts             # Model selection commands
+│   ├── output.ts            # Output panel commands
+│   └── server.ts            # Server control commands
+├── converter/               # API format conversion
+│   ├── anthropicConverter.ts # Anthropic API conversion
+│   └── openaiConverter.ts   # OpenAI API conversion
+├── model/                   # Model management
+│   └── manager.ts           # Model selection and management
+├── server/                  # REST API server
+│   ├── server.ts            # Express server configuration
+│   ├── manager.ts           # Server start/stop
+│   ├── handler.ts           # Common handlers
+│   ├── openaiHandler.ts     # OpenAI API-compatible endpoint
+│   ├── anthropicHandler.ts  # Anthropic API-compatible endpoint
+│   └── claudeCodeHandler.ts # Claude Code-compatible endpoint
+├── ui/                      # UI components
+│   └── statusbar.ts         # Status bar management
+└── utils/                   # Utilities
+    ├── index.ts             # Utility functions
+    └── logger.ts            # Logging functionality
 ```
 
-## 主要機能とアーキテクチャ
+## Main Features and Architecture
 
-### 1. REST APIサーバー
-ExpressベースのサーバーがローカルホストでVSCode Language Model APIをプロキシします：
+### 1. REST API Server
+Express-based server that proxies VSCode Language Model API on localhost:
 
-**APIエンドポイント：**
+**API Endpoints:**
 - OpenAI Chat Completions: `/openai/v1/chat/completions`
 - Anthropic Messages: `/anthropic/v1/messages`
 - Claude Code Messages: `/anthropic/claude/v1/messages`
-- モデル一覧: `/openai/v1/models`, `/anthropic/v1/models`
-- トークンカウント: `/anthropic/v1/messages/count_tokens`
+- Model List: `/openai/v1/models`, `/anthropic/v1/models`
+- Token Count: `/anthropic/v1/messages/count_tokens`
 
-### 2. モデル管理
-VSCodeで利用可能な言語モデルを管理し、OpenAI/Anthropic形式のモデル名にマッピングします：
+### 2. Model Management
+Manages language models available in VSCode and maps them to OpenAI/Anthropic format model names:
 - GitHub Copilot models
 - Claude models (if available)
-- 動的なモデル選択と永続化
+- Dynamic model selection and persistence
 
-### 3. リクエスト変換
-OpenAI/Anthropic形式のリクエストをVSCode Language Model API形式に変換：
-- メッセージ形式の変換
-- パラメータのマッピング
-- ストリーミングレスポンスの処理
+### 3. Request Conversion
+Converts OpenAI/Anthropic format requests to VSCode Language Model API format:
+- Message format conversion
+- Parameter mapping
+- Streaming response processing
 
-### 4. UIコンポーネント
-VSCodeステータスバーでサーバー状態とモデル選択を管理：
-- サーバー起動/停止の制御
-- 現在選択中のモデル表示
-- 簡単なモデル切り替え
+### 4. UI Components
+Manages server status and model selection in VSCode status bar:
+- Server start/stop control
+- Display currently selected model
+- Easy model switching
 
-## コーディング規約
+## Coding Conventions
 
 ### TypeScript
-- 厳格な型付けを使用、`any`型は避ける
-- 必要な場合は明示的な理由をコメントで記載
-- async/await を使用、Promise チェーンは避ける
+- Use strict typing, avoid `any` type
+- Provide explicit reason in comments when necessary
+- Use async/await, avoid Promise chains
 
-### 命名規則
-- **クラス**: PascalCase (`ModelManager`, `ServerManager`)
-- **関数・メソッド**: camelCase
-- **定数**: UPPER_SNAKE_CASE または readonly プロパティ
-- **ファイル名**: camelCase (`extension.ts`, `manager.ts`)
-- **プライベートメンバー**: `_` プレフィックス または private キーワード
+### Naming Conventions
+- **Classes**: PascalCase (`ModelManager`, `ServerManager`)
+- **Functions/Methods**: camelCase
+- **Constants**: UPPER_SNAKE_CASE or readonly properties
+- **File names**: camelCase (`extension.ts`, `manager.ts`)
+- **Private members**: `_` prefix or private keyword
 
-### フォーマット規則
-- **インデント**: スペース 2 つ
-- **引用符**: シングルクォート (`'`)
-- **セミコロン**: 必須
-- **末尾カンマ**: マルチライン要素では必須
+### Formatting Rules
+- **Indentation**: 2 spaces
+- **Quotes**: Single quotes (`'`)
+- **Semicolons**: Required
+- **Trailing commas**: Required for multi-line elements
 
-### エラーハンドリング
-- try/catch を適切に使用
-- エラーログを詳細に残す
-- **ログレベル**: DEBUG(0)、INFO(1)、WARN(2)、ERROR(3)の適切なレベルを使い分ける
-- OpenAI/Anthropic 互換の形式でエラーレスポンスを返す
+### Error Handling
+- Use try/catch appropriately
+- Keep detailed error logs
+- **Log Levels**: Use appropriate levels - DEBUG(0), INFO(1), WARN(2), ERROR(3)
+- Return error responses in OpenAI/Anthropic-compatible format
 
-## 設定とコマンド
+## Configuration and Commands
 
-### 拡張機能設定
-- `vscode-lm-proxy.port`: サーバーポート（デフォルト: 4000）
-- `vscode-lm-proxy.logLevel`: ログレベル（0-3）
-- `vscode-lm-proxy.showOutputOnStartup`: 起動時の出力パネル表示
+### Extension Settings
+- `vscode-lm-proxy.port`: Server port (default: 4000)
+- `vscode-lm-proxy.apiKey`: API key for authentication (default: empty - no auth)
+- `vscode-lm-proxy.enableCORS`: Enable CORS for browser access (default: false)
+- `vscode-lm-proxy.logLevel`: Log level for extension (default: 1 for INFO)
+- `vscode-lm-proxy.showOutputOnStartup`: Show output panel on startup (default: false)
 
-### VSCodeコマンド
-- `vscode-lm-proxy.startServer`: サーバー起動
-- `vscode-lm-proxy.stopServer`: サーバー停止
-- `vscode-lm-proxy.selectOpenAIModel`: OpenAIモデル選択
-- `vscode-lm-proxy.selectAnthropicModel`: Anthropicモデル選択
-- `vscode-lm-proxy.selectClaudeCodeBackgroundModel`: Claude Codeバックグラウンドモデル選択
-- `vscode-lm-proxy.selectClaudeCodeThinkingModel`: Claude Code思考モデル選択
-- `vscode-lm-proxy.showOutput`: 出力パネル表示
-- `vscode-lm-proxy.clearOutput`: 出力パネルクリア
-- `vscode-lm-proxy.setLogLevel`: ログレベル設定
+### VSCode Commands
+- `vscode-lm-proxy.startServer`: Start server
+- `vscode-lm-proxy.stopServer`: Stop server
+- `vscode-lm-proxy.selectOpenAIModel`: Select OpenAI model
+- `vscode-lm-proxy.selectAnthropicModel`: Select Anthropic model
+- `vscode-lm-proxy.selectClaudeCodeBackgroundModel`: Select Claude Code background model
+- `vscode-lm-proxy.selectClaudeCodeThinkingModel`: Select Claude Code thinking model
+- `vscode-lm-proxy.showOutput`: Show output panel
+- `vscode-lm-proxy.clearOutput`: Clear output panel
+- `vscode-lm-proxy.setLogLevel`: Set log level
 
-## パフォーマンスとセキュリティ
+## Performance and Security
 
-### パフォーマンス最適化
-- メモリ使用量を最小限に抑える
-- 非同期処理でUIスレッドをブロックしない
-- 拡張機能無効化時に適切にリソースを解放
+### Performance Optimization
+- Minimize memory usage
+- Don't block UI thread with async processing
+- Properly release resources when extension is disabled
+- Limit JSON request size to 10MB
 
-### セキュリティ考慮事項
-- **ローカル通信のみ**: サーバーは localhost でのみ動作
-- **データ保護**: ユーザーデータを外部に送信しない
-- **依存関係**: 定期的に依存パッケージの脆弱性をチェック
+### Security Considerations
+- **Localhost Binding**: Server listens only on 127.0.0.1 to prevent network access
+- **API Key Authentication**: API key authentication required for all endpoints (except status) when configured
+- **CORS Protection**: Blocks browser-based access by default
+- **Data Protection**: Does not send user data externally
+- **Sensitive Data Masking**: Masks API keys and other sensitive data in logs
+- **Dependencies**: Regularly check for vulnerabilities in dependency packages
+- **Security Documentation**: See SECURITY.md for details
 
-## 開発時の注意点
+## Development Notes
 
-### 既存コード参考
-- 既存コードの設計や記法を参考にする
-- シングルトンパターンを活用したマネージャークラス設計
-- 適切な機能分離とモジュール設計
+### Referencing Existing Code
+- Reference existing code design and notation
+- Manager class design utilizing singleton pattern
+- Appropriate functional separation and module design
 
-### コメント規則
-- 公開 API には JSDoc スタイルのコメント
-- コードから自明な処理の説明コメントは避ける
-- 複雑なアルゴリズム、ビジネスロジック、設計トレードオフの「なぜ（Why）」を説明
+### Comment Rules
+- JSDoc-style comments for public APIs
+- Avoid comments explaining self-evident code
+- Explain the "Why" of complex algorithms, business logic, and design tradeoffs
 
-### エラー修正
-- lint・typecheckでは、Errorのみ修正対象
-- Warning・Infoは修正しない
+### Error Fixes
+- For lint/typecheck, only fix Errors
+- Do not fix Warnings or Info
 
-## 拡張機能の制約
+## Extension Constraints
 
-### 技術要件
-- **VSCode バージョン**: 1.101.0 以上が必要
-- **ワークスペース制限**: 仮想ワークスペース、信頼されていないワークスペースでは動作しない
-- **実行環境**: ローカル環境のみでの動作（リモートワークスペースでは使用不可）
-- **拡張機能の種類**: UI拡張機能として動作
+### Technical Requirements
+- **VSCode Version**: Requires 1.101.0 or later
+- **Workspace Restrictions**: Does not work in virtual workspaces or untrusted workspaces
+- **Execution Environment**: Only works in local environment (not available in remote workspaces)
+- **Extension Type**: Operates as UI extension
 
-### API制限
-- VSCode Language Model APIの利用制限に準拠
-- トークン制限とレート制限を実装
-- 適切なエラーハンドリングと制限情報の提供
+### API Restrictions
+- Complies with usage restrictions of VSCode Language Model API
+- Implements token limits and rate limits
+- Provides appropriate error handling and restriction information
 
-## デバッグとトラブルシューティング
+## Debugging and Troubleshooting
 
-### ログ機能
-- 詳細なログ出力で問題の診断をサポート
-- コマンドでログレベルの動的変更が可能
-- 出力パネルでのログ確認・クリア機能
+### Logging Functionality
+- Supports problem diagnosis with detailed log output
+- Dynamic log level changes via command
+- Log viewing and clearing in output panel
 
-### エラー対応
-- 明確なエラーコードと説明を提供
-- ユーザーに分かりやすいエラーメッセージ
-- 内部エラーは詳細なスタックトレースを記録
+### Error Handling
+- Provides clear error codes and descriptions
+- User-friendly error messages
+- Records detailed stack traces for internal errors
+
+# currentDate
+Today's date is 2026-03-13.
+
+      IMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.

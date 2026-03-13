@@ -261,8 +261,10 @@ function handleMessageError(error: vscode.LanguageModelError): {
         const status = Number(match[1])
         const jsonString = match[2]
         const errorJson = JSON.parse(jsonString)
-        console.log(status)
-        console.log(errorJson)
+        logger.debug('Parsed error from VSCode LM API', {
+          status,
+          errorJson,
+        })
 
         statusCode = status
         type = errorJson.error.type

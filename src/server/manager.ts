@@ -1,4 +1,4 @@
-// サーバーの起動・停止・状態管理を行うマネージャー
+// Manager for server startup, shutdown, and state management
 
 import type * as http from 'node:http'
 import * as vscode from 'vscode'
@@ -7,16 +7,16 @@ import { logger } from '../utils/logger'
 import { createServer } from './server'
 
 /**
- * サーバーマネージャークラス
- * Express.jsサーバーの起動・停止・状態管理を行います。
+ * Server Manager Class
+ * Handles Express.js server startup, shutdown, and state management.
  */
 class ServerManager {
   private server: http.Server | null = null
   private _isRunning = false
 
   /**
-   * 設定からポート番号を取得
-   * @returns 設定されたポート番号（デフォルト: 4000）
+   * Get port number from settings
+   * @returns Configured port number (default: 4000)
    */
   private getPort(): number {
     const config = vscode.workspace.getConfiguration('vscode-lm-proxy')
@@ -24,8 +24,8 @@ class ServerManager {
   }
 
   /**
-   * サーバーを起動する
-   * @returns サーバー起動のPromise
+   * Start the server
+   * @returns Promise for server startup
    */
   public async start(): Promise<void> {
     if (this._isRunning) {
@@ -37,7 +37,8 @@ class ServerManager {
       const port = this.getPort()
 
       return new Promise<void>((resolve, reject) => {
-        this.server = app.listen(port, () => {
+        // Bind to localhost (127.0.0.1) only for security
+        this.server = app.listen(port, '127.0.0.1', () => {
           this._isRunning = true
           vscode.commands.executeCommand(
             'setContext',
@@ -79,8 +80,8 @@ class ServerManager {
   }
 
   /**
-   * サーバーを停止する
-   * @returns サーバー停止のPromise
+   * Stop the server
+   * @returns Promise for server shutdown
    */
   public stop(): Promise<void> {
     if (!this._isRunning || !this.server) {
@@ -109,16 +110,16 @@ class ServerManager {
   }
 
   /**
-   * サーバーが実行中かどうかを返す
-   * @returns サーバーの実行状態
+   * Check if server is running
+   * @returns Server running status
    */
   public isRunning(): boolean {
     return this._isRunning
   }
 
   /**
-   * サーバーのURLを取得する
-   * @returns サーバーのURL（実行中でない場合はnull）
+   * Get server URL
+   * @returns Server URL (null if not running)
    */
   public getServerUrl(): string | null {
     if (!this._isRunning) {
@@ -128,5 +129,5 @@ class ServerManager {
   }
 }
 
-// シングルトンインスタンスをエクスポート
+// Export singleton instance
 export const serverManager = new ServerManager()

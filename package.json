@@ -1,7 +1,7 @@
 {
   "name": "vscode-lm-proxy",
   "displayName": "LM Proxy",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Expose VSCode's GitHub Copilot capabilities through OpenAI, Anthropic, and Claude Code compatible REST APIs. Access GitHub Copilot from external applications using the VSCode Language Model API.",
   "categories": [
     "AI",
@@ -110,6 +110,16 @@
           "minimum": 1024,
           "maximum": 65535,
           "description": "Port number used by the LM Proxy server"
+        },
+        "vscode-lm-proxy.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for authentication. IMPORTANT: Set this to a secure random string to protect your server. Leave empty only for testing (NOT recommended)."
+        },
+        "vscode-lm-proxy.enableCORS": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable CORS for browser-based access. WARNING: Only enable if you need browser access and understand the security implications."
         },
         "vscode-lm-proxy.logLevel": {
           "type": "number",
