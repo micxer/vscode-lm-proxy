@@ -1,8 +1,8 @@
 # VS Code拡張機能向け.gitignore
 
 # ビルドアウトプット
-out
-dist
+out/
+dist/
 
 # 依存関係
 node_modules
@@ -41,3 +41,5 @@ Desktop.ini
 
 # カバレッジディレクトリ
 coverage/
+
+node_modules/

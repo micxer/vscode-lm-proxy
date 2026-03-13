@@ -1,22 +1,22 @@
-// 出力パネル関連のコマンド
+// Output panel related commands
 import * as vscode from 'vscode'
 import { logger } from '../utils/logger'
 
 /**
- * 出力パネル関連のコマンド（表示・クリア・ログレベル変更）をVSCodeに登録します。
- * @param {vscode.ExtensionContext} context 拡張機能のグローバルコンテキスト
+ * Output panel related commandsVSCode register
+ * @param {vscode.ExtensionContext} context Extension global context
  */
 export function registerOutputCommands(context: vscode.ExtensionContext): void {
-  // 出力パネルを表示するコマンド
+  // Show output panel command
   const showOutputCommand = vscode.commands.registerCommand(
     'vscode-lm-proxy.showOutput',
     () => {
-      logger.show(false) // フォーカスを出力パネルに移す
+      logger.show(false) // Move focus to output panel
       logger.info('Output panel displayed')
     },
   )
 
-  // 出力パネルをクリアするコマンド
+  // Clear output panel command
   const clearOutputCommand = vscode.commands.registerCommand(
     'vscode-lm-proxy.clearOutput',
     () => {
@@ -25,7 +25,7 @@ export function registerOutputCommands(context: vscode.ExtensionContext): void {
     },
   )
 
-  // ログレベルをQuickPickで選択して設定するコマンド
+  // log levelQuickPick to select and set command
   const setLogLevelCommand = vscode.commands.registerCommand(
     'vscode-lm-proxy.setLogLevel',
     async () => {
@@ -62,7 +62,7 @@ export function registerOutputCommands(context: vscode.ExtensionContext): void {
     },
   )
 
-  // コンテキストに登録
+  // Register to context
   context.subscriptions.push(
     showOutputCommand,
     clearOutputCommand,

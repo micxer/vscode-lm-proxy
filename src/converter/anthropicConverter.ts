@@ -13,17 +13,17 @@ import { generateRandomId } from '../utils'
 import { logger } from '../utils/logger'
 
 /**
- * Anthropic APIのMessageCreateParamsリクエストを
- * VSCode拡張APIのチャットリクエスト形式に変換する。
+ * Anthropic API MessageCreateParams request
+ * to VSCode extension API chat request format.
  *
- * - systemプロンプトやmessagesをVSCodeのメッセージ配列に変換
- * - tools, tool_choice等をVSCode APIのオプション形式に変換
- * - VSCode APIが未対応のパラメータはmodelOptionsに集約
- * - 仕様差異を吸収するための変換ロジックを含む
+ * - Convert system prompts and messages to VSCode message array
+ * - tools, tool_choiceetc.VSCode API optionsformat
+ * - VSCode APInot supported parameters modelOptions consolidated
+ * - specification differences to absorb conversion logic includes
  *
- * @param anthropicRequest Anthropicのチャットリクエストパラメータ
- * @param vsCodeModel VSCodeのLanguageModelChatインスタンス
- * @returns VSCode拡張API用のチャットメッセージ配列とオプション
+ * @param anthropicRequest Anthropic chat request parameters
+ * @param vsCodeModel VSCode LanguageModelChatinstance
+ * @returns VSCodeextensionAPIfor chat message array and options
  */
 export async function convertAnthropicRequestToVSCodeRequest(
   anthropicRequest: MessageCreateParams,
@@ -35,13 +35,13 @@ export async function convertAnthropicRequestToVSCodeRequest(
 }> {
   logger.debug('Converting Anthropic request to VSCode request')
 
-  // --- messages変換 ---
+  // --- messagesconvert ---
   const messages: vscode.LanguageModelChatMessage[] = []
 
-  // systemプロンプトがあればassistant roleで先頭に追加
+  // system promptif existsassistant role with add at beginning
   if ('system' in anthropicRequest && anthropicRequest.system) {
     if (typeof anthropicRequest.system === 'string') {
-      // stringの場合
+      // string case
       messages.push(
         new vscode.LanguageModelChatMessage(
           vscode.LanguageModelChatMessageRole.Assistant,
@@ -50,7 +50,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
         ),
       )
     } else if (Array.isArray(anthropicRequest.system)) {
-      // TextBlockParam[] の場合
+      // TextBlockParam[] case
       for (const block of anthropicRequest.system) {
         if (block.type === 'text' && typeof block.text === 'string') {
           messages.push(
@@ -65,7 +65,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
     }
   }
 
-  // 通常のmessagesを追加
+  // normal messagesadd
   messages.push(
     ...anthropicRequest.messages.map(msg => {
       let role: vscode.LanguageModelChatMessageRole
@@ -78,7 +78,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
           > = ''
       let name = 'Assistant'
 
-      // ロール変換
+      // Role conversion
       switch (msg.role) {
         case 'user':
           role = vscode.LanguageModelChatMessageRole.User
@@ -90,7 +90,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
           break
       }
 
-      // content変換（string or array）
+      // contentconvert
       if (typeof msg.content === 'string') {
         content = msg.content
       } else if (Array.isArray(msg.content)) {
@@ -109,7 +109,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
                 c.input ?? {},
               )
             case 'tool_result':
-              // c.contentが配列の場合
+              // c.contentarray case
               if (Array.isArray(c.content)) {
                 return new vscode.LanguageModelToolResultPart(
                   c.tool_use_id,
@@ -126,7 +126,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
                 )
               }
 
-              // c.contentがstringの場合
+              // c.contentstring case
               return new vscode.LanguageModelToolResultPart(c.tool_use_id, [
                 new vscode.LanguageModelTextPart(c.content ?? 'undefined'),
               ])
@@ -160,16 +160,16 @@ export async function convertAnthropicRequestToVSCodeRequest(
     }),
   )
 
-  // --- input tokens計算 ---
+  // --- Calculate input tokens ---
   let inputTokens = 0
   for (const msg of messages) {
     inputTokens += await vsCodeModel.countTokens(msg)
   }
 
-  // --- options生成 ---
+  // --- Generate options ---
   const options: vscode.LanguageModelChatRequestOptions = {}
 
-  // tool_choice変換
+  // Convert tool_choice
   if (
     'tool_choice' in anthropicRequest &&
     anthropicRequest.tool_choice !== undefined
@@ -185,13 +185,13 @@ export async function convertAnthropicRequestToVSCodeRequest(
       case 'tool':
         options.toolMode = vscode.LanguageModelChatToolMode.Required
         break
-      case 'none': // VSCode APIにNoneはないためAuto
+      case 'none': // VSCode API None does not exist, so Auto
         options.toolMode = vscode.LanguageModelChatToolMode.Auto
         break
     }
   }
 
-  // tools変換
+  // Convert tools
   if ('tools' in anthropicRequest && Array.isArray(anthropicRequest.tools)) {
     options.tools = anthropicRequest.tools.map(tool => {
       switch (tool.name) {
@@ -264,7 +264,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
     })
   }
 
-  // --- その他パラメータはmodelOptionsに集約 ---
+  // --- Consolidate other parameters into modelOptions ---
   const modelOptions: { [name: string]: any } = {}
   const modelOptionKeys = [
     // 'max_tokens',
@@ -280,7 +280,7 @@ export async function convertAnthropicRequestToVSCodeRequest(
     'top_p',
   ]
 
-  // オプションをmodelOptions
+  // optionsmodelOptions
   for (const key of modelOptionKeys) {
     if (
       key in anthropicRequest &&
@@ -290,17 +290,17 @@ export async function convertAnthropicRequestToVSCodeRequest(
     }
   }
 
-  // max_tokensを変換
-  // max_tokensが1の場合は少し大きい数字に変換、それ以外の場合はそのまま使用
+  // max_tokensconvert
+  // max_tokens1 case, use slightly larger numberConverts otherwise use
   modelOptions.max_tokens =
     anthropicRequest.max_tokens === 1 ? 16 : anthropicRequest.max_tokens
 
-  // modelOptionsが空でなければoptionsに追加
+  // modelOptionsempty, add to options add
   if (Object.keys(modelOptions).length > 0) {
     options.modelOptions = modelOptions
   }
 
-  // --- 変換結果をログ出力 ---
+  // --- convertresultand log ---
   logger.debug('Converted Anthropic request to VSCode request', {
     messages,
     options,
@@ -311,14 +311,14 @@ export async function convertAnthropicRequestToVSCodeRequest(
 }
 
 /**
- * VSCodeのLanguageModelChatResponseをAnthropicのMessageまたはAsyncIterable<RawMessageStreamEvent>形式に変換します。
- * ストリーミングの場合はRawMessageStreamEventのAsyncIterableを返し、
- * 非ストリーミングの場合は全文をMessage形式で返します。
- * @param vscodeResponse VSCodeのLanguageModelChatResponse
- * @param vsCodeModel VSCodeのLanguageModelChatインスタンス
- * @param isStreaming ストリーミングかどうか
- * @param inputTokens 入力トークン数
- * @returns Message または AsyncIterable<RawMessageStreamEvent>
+ * VSCode LanguageModelChatResponseAnthropic Message or AsyncIterable<RawMessageStreamEvent>formatConverts
+ * For streaming RawMessageStreamEvent AsyncIterable, returns
+ * For non-streaming full textMessageformat
+ * @param vscodeResponse VSCode LanguageModelChatResponse
+ * @param vsCodeModel VSCode LanguageModelChatinstance
+ * @param isStreaming streamingwhether
+ * @param inputTokens input token count
+ * @returns Message or AsyncIterable<RawMessageStreamEvent>
  */
 export function convertVSCodeResponseToAnthropicResponse(
   vscodeResponse: vscode.LanguageModelChatResponse,
@@ -327,7 +327,7 @@ export function convertVSCodeResponseToAnthropicResponse(
   inputTokens: number,
 ): Promise<Message> | AsyncIterable<RawMessageStreamEvent> {
   if (isStreaming) {
-    // ストリーミング: VSCode stream → Anthropic RawMessageStreamEvent列に変換
+    // streaming: VSCode stream to Anthropic RawMessageStreamEvent list
     return convertVSCodeStreamToAnthropicStream(
       vscodeResponse.stream,
       vsCodeModel,
@@ -335,7 +335,7 @@ export function convertVSCodeResponseToAnthropicResponse(
     )
   }
 
-  // 非ストリーミング: VSCode text → Anthropic Message
+  // Non-streaming: VSCode text to Anthropic Message
   return convertVSCodeTextToAnthropicMessage(
     vscodeResponse,
     vsCodeModel,
@@ -344,14 +344,14 @@ export function convertVSCodeResponseToAnthropicResponse(
 }
 
 /**
- * VSCodeのストリームをAnthropicのRawMessageStreamEvent列に変換する。
- * - テキストパートはcontent_block_start, content_block_delta, content_block_stopで表現
- * - ツールコールパートはtool_useブロックとして表現
- * - 最後にmessage_delta, message_stopを送信
- * @param stream VSCodeのストリーム
- * @param vsCodeModel VSCodeのLanguageModelChatインスタンス
- * @param inputTokens 入力トークン数
- * @returns Anthropic RawMessageStreamEventのAsyncIterable
+ * VSCode stream to Anthropic RawMessageStreamEvent list
+ * - text part content_block_start, content_block_delta, content_block_stop with represented
+ * - tool call part tool_use blockas represented
+ * - finally message_delta, message_stopsend
+ * @param stream VSCode stream
+ * @param vsCodeModel VSCode LanguageModelChatinstance
+ * @param inputTokens input token count
+ * @returns Anthropic RawMessageStreamEvent AsyncIterable
  */
 async function* convertVSCodeStreamToAnthropicStream(
   stream: AsyncIterable<
@@ -364,7 +364,7 @@ async function* convertVSCodeStreamToAnthropicStream(
   let stopReason: StopReason = 'end_turn'
   let outputTokens = 0
 
-  // --- message_startイベント送信 ---
+  // --- message_starteventsend ---
   yield {
     type: 'message_start',
     message: {
@@ -389,10 +389,10 @@ async function* convertVSCodeStreamToAnthropicStream(
   let contentIndex = 0
   let isInsideTextBlock = false
 
-  // --- ストリームを順次処理 ---
+  // --- streamsequentiallyprocessing ---
   for await (const part of stream) {
     if (isTextPart(part)) {
-      // テキストブロック開始
+      // text blockstart
       if (!isInsideTextBlock) {
         yield {
           type: 'content_block_start',
@@ -401,25 +401,25 @@ async function* convertVSCodeStreamToAnthropicStream(
         }
         isInsideTextBlock = true
       }
-      // テキスト差分を送信
+      // textdelta, send
       yield {
         type: 'content_block_delta',
         index: contentIndex,
         delta: { type: 'text_delta', text: part.value },
       }
-      // 出力トークン数を加算
+      // output token countadd
       outputTokens += await vsCodeModel.countTokens(part.value)
     } else if (isToolCallPart(part)) {
-      // テキストブロック終了
+      // text blockend
       if (isInsideTextBlock) {
         yield { type: 'content_block_stop', index: contentIndex }
         isInsideTextBlock = false
         contentIndex++
       }
-      // ツールコール時はstopReasonを変更
+      // tool callwhen stopReasonchange
       stopReason = 'tool_use'
 
-      // ツールコールブロック開始
+      // tool call blockstart
       yield {
         type: 'content_block_start',
         index: contentIndex,
@@ -431,7 +431,7 @@ async function* convertVSCodeStreamToAnthropicStream(
         },
       }
 
-      // input_json_deltaを送信
+      // input_json_delta, send
       yield {
         type: 'content_block_delta',
         index: contentIndex,
@@ -441,22 +441,22 @@ async function* convertVSCodeStreamToAnthropicStream(
         },
       }
 
-      // ツールコールブロック終了
+      // tool call blockend
       yield { type: 'content_block_stop', index: contentIndex }
       contentIndex++
 
-      // ツールコールもトークン数に加算
+      // Also add tool call to token count
       outputTokens += await vsCodeModel.countTokens(JSON.stringify(part))
     }
   }
 
-  // --- 最後のテキストブロックが未終了なら閉じる ---
+  // --- finally text blockif not endedclose ---
   if (isInsideTextBlock) {
     yield { type: 'content_block_stop', index: contentIndex }
     contentIndex++
   }
 
-  // --- message_deltaイベント送信 ---
+  // --- message_deltaeventsend ---
   yield {
     type: 'message_delta',
     delta: {
@@ -472,18 +472,18 @@ async function* convertVSCodeStreamToAnthropicStream(
     },
   }
 
-  // --- message_stopイベント送信 ---
+  // --- message_stopeventsend ---
   yield { type: 'message_stop' }
 }
 
 /**
- * VSCodeのLanguageModelChatResponse（非ストリーミング）を
- * AnthropicのMessage形式に変換する。
- * - テキストパートはtextブロックとして連結
- * - ツールコールパートはtool_useブロックとして追加
- * @param vscodeResponse VSCodeのLanguageModelChatResponse
- * @param vsCodeModel VSCodeのLanguageModelChatインスタンス
- * @param inputTokens 入力トークン数
+ * VSCode LanguageModelChatResponse
+ * Anthropic MessageformatConverts
+ * - text part text block as concatenation
+ * - tool call part tool_use block as addition
+ * @param vscodeResponse VSCode LanguageModelChatResponse
+ * @param vsCodeModel VSCode LanguageModelChatinstance
+ * @param inputTokens input token count
  * @returns Anthropic Message
  */
 async function convertVSCodeTextToAnthropicMessage(
@@ -498,22 +498,22 @@ async function convertVSCodeTextToAnthropicMessage(
   let isToolCalled = false
   let outputTokens = 0
 
-  // --- ストリームを順次処理 ---
+  // --- streamsequentiallyprocessing ---
   for await (const part of vscodeResponse.stream) {
     if (isTextPart(part)) {
-      // テキストはバッファに連結
+      // Concatenate text to buffer
       textBuffer += part.value
 
-      // 出力トークン数を加算
+      // output token countadd
       outputTokens += await vsCodeModel.countTokens(part.value)
     } else if (isToolCallPart(part)) {
       if (textBuffer) {
-        // テキストバッファがあればtextブロックとして追加
+        // text bufferif exists, add as text block
         content.push({ type: 'text', text: textBuffer, citations: [] })
         textBuffer = ''
       }
 
-      // tool_useブロック追加
+      // Add tool_use block
       content.push({
         type: 'tool_use',
         id: part.callId,
@@ -521,25 +521,25 @@ async function convertVSCodeTextToAnthropicMessage(
         input: part.input,
       })
 
-      // ツールコールもトークン数に加算
+      // Also add tool call to token count
       outputTokens += await vsCodeModel.countTokens(JSON.stringify(part))
 
-      // フラグを立てる
+      // set flag
       isToolCalled = true
     }
   }
 
-  // 残りのテキストバッファをtextブロックとして追加
+  // remaining text buffertext block as addition
   if (textBuffer) {
     content.push({ type: 'text', text: textBuffer, citations: [] })
   }
 
-  // contentが空なら空textブロックを追加
+  // contentif empty, add emptytext block, add
   if (content.length === 0) {
     content.push({ type: 'text', text: '', citations: [] })
   }
 
-  // --- Anthropic Messageオブジェクトを返す ---
+  // --- Anthropic Messageobjectreturn ---
   return {
     id,
     type: 'message',
