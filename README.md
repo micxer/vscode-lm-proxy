@@ -40,6 +40,21 @@ Alternatively, you can download the `.vsix` file from the [releases page](https:
 
 ---
 
+## Releases
+
+New versions are automatically built and released via GitHub Actions. Download the latest release from the [releases page](https://github.com/ryonakae/vscode-lm-proxy/releases).
+
+### Installing from GitHub Releases
+
+1. Download the `.vsix` file from the [releases page](https://github.com/ryonakae/vscode-lm-proxy/releases)
+2. Open VSCode
+3. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
+4. Run: `Extensions: Install from VSIX...`
+5. Select the downloaded `.vsix` file
+6. Reload VSCode when prompted
+
+---
+
 ## Usage
 
 ### Starting the Server
