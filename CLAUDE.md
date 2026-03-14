@@ -12,7 +12,7 @@ This allows external applications to easily utilize VSCode's Language Model API.
 - **TypeScript**: 5.8.3 (strict typing)
 - **VSCode API**: 1.101.0 or later
 - **Express**: 4.21.2 (REST API server)
-- **Node.js**: 20.x
+- **Node.js**: 24.x
 - **Biome**: 2.0.5 (linter and formatter)
 
 ## Development Commands
