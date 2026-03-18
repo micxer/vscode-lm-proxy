@@ -35,8 +35,15 @@ export async function activate(context: vscode.ExtensionContext) {
   modelManager = require('./model/manager').modelManager
 
   // Set ExtensionContext to model manager
-  // This restores previously saved model information
-  modelManager.setExtensionContext(context)
+  // This restores previously saved model information (now async with validation)
+  try {
+    await modelManager.setExtensionContext(context)
+  } catch (error) {
+    logger.warn(
+      `Error during model validation at startup: ${(error as Error).message}`,
+    )
+    // Continue activation even if validation fails
+  }
 
   // Set global state to LmApiHandler
   // Makes VSCode's global storage available to API handler
