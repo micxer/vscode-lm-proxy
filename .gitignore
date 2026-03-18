@@ -42,4 +42,7 @@ Desktop.ini
 # カバレッジディレクトリ
 coverage/
 
+# Git worktrees
+.worktrees/
+
 node_modules/
