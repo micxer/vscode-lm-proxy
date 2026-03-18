@@ -281,6 +281,60 @@ LM Proxy leverages the VSCode Language Model API (LM API) to communicate with Gi
 
 This approach allows you to utilize the full power of GitHub Copilot in your applications without having to implement custom integrations.
 
+---
+
+## Development
+
+### Running Tests
+
+This project uses [Vitest](https://vitest.dev/) for testing.
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Test Structure
+
+```
+test/
+├── unit/           # Unit tests
+│   ├── converter/  # API format conversion tests
+│   ├── model/      # Model management tests
+│   └── server/     # Server handler tests
+├── fixtures/       # Test fixtures
+│   ├── requests/   # Sample API requests
+│   └── responses/  # Sample API responses
+└── mocks/          # VSCode API mocks
+    └── vscode.ts   # Mock VSCode API for testing
+```
+
+### Adding New Tests
+
+1. Create test files with `.test.ts` extension in the appropriate directory under `test/unit/`
+2. Import test utilities from Vitest: `import { describe, it, expect } from 'vitest'`
+3. Use the VSCode API mocks from `test/mocks/vscode` for testing extension code
+4. Run tests to verify your changes: `npm test`
+
+### Coding Guidelines
+
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines including:
+- TypeScript conventions
+- Error handling patterns
+- Security considerations
+- Testing requirements
+
+---
+
 ## License
 
 This extension is licensed under the [MIT License](LICENSE).

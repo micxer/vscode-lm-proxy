@@ -22,6 +22,12 @@ This allows external applications to easily utilize VSCode's Language Model API.
 npm run compile          # Compile TypeScript
 npm run watch           # Compile in watch mode
 
+# Testing
+npm test                # Run all tests
+npm run test:watch      # Run tests in watch mode
+npm run test:ui         # Run tests with UI
+npm run test:coverage   # Run tests with coverage report
+
 # Code Quality
 npm run check           # Run Biome linter
 biome check --write     # Auto-fix lint issues
@@ -29,6 +35,89 @@ biome check --write     # Auto-fix lint issues
 # Packaging
 npm run vscode:prepublish  # Build extension (before publishing)
 ```
+
+## Testing
+
+### Testing Framework
+
+- **Framework**: Vitest 4.1.0 with Node environment
+- **Coverage**: @vitest/coverage-v8 for code coverage reporting
+- **Mocking**: Custom VSCode API mocks in `test/mocks/vscode.ts`
+
+### Testing Guidelines
+
+**Test Coverage Requirements:**
+- Maintain 80%+ coverage on critical paths (model management, API conversion, request handling)
+- Focus on testing business logic and error handling
+- Prioritize tests for bug fixes and security-sensitive code
+
+**When to Write Tests:**
+- **Always**: Before committing bug fixes (reproduce the bug, verify the fix)
+- **Always**: For new model validation or persistence logic
+- **Recommended**: For API format conversion functions
+- **Optional**: For simple utility functions with obvious behavior
+
+**Test Structure:**
+```typescript
+describe('Feature Name', () => {
+  beforeEach(() => {
+    // Reset mocks and state
+  });
+
+  it('should handle expected behavior', () => {
+    // Arrange: Set up test data
+    // Act: Execute the code being tested
+    // Assert: Verify expected outcomes
+  });
+
+  it('should handle error cases gracefully', () => {
+    // Test error scenarios
+  });
+});
+```
+
+**VSCode API Mocking:**
+- Use mocks from `test/mocks/vscode.ts` for all VSCode API dependencies
+- Mock provides: `LanguageModelChat`, `lm.selectChatModels()`, `Memento` (globalState), event emitters
+- Reset mock state in `beforeEach` hooks to ensure test isolation
+
+**Running Tests Before Commit:**
+```bash
+# Quick check (runs all tests)
+npm test
+
+# With coverage to see what's tested
+npm run test:coverage
+
+# Fix any failures before committing
+```
+
+**Test File Organization:**
+```
+test/
+├── unit/                   # Unit tests mirror src/ structure
+│   ├── converter/          # Tests for API converters
+│   ├── model/              # Tests for model management
+│   └── server/             # Tests for request handlers
+├── fixtures/               # Reusable test data
+│   ├── requests/           # Sample API requests
+│   └── responses/          # Sample API responses
+└── mocks/                  # Mock implementations
+    └── vscode.ts           # VSCode API mocks
+```
+
+### Critical Test Cases
+
+**Model Validation (High Priority):**
+- Valid model IDs are restored from globalState at startup
+- Stale model IDs (no longer exist) are cleared and logged
+- Request-time validation catches models that become unavailable
+- Null setters properly clear both memory and globalState
+
+**Error Handling:**
+- Model not found errors include helpful messages
+- Distinguish "no model selected" from "model unavailable"
+- API errors are properly formatted for OpenAI/Anthropic clients
 
 ## Project Structure
 

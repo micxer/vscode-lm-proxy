@@ -73,7 +73,26 @@ export async function getVSCodeModel(
     logger.debug('Retrieved VSCode model:', { vsCodeModel })
 
     if (!vsCodeModel) {
-      throw new Error(`Model ${selectedModelId} not found`)
+      // Model not found - provide helpful error message based on context
+      let errorMessage: string
+
+      if (modelId === 'vscode-lm-proxy') {
+        // This was a stored "vscode-lm-proxy" model that's now invalid
+        // Clear the stale model ID from manager
+        if (provider === 'openai') {
+          modelManager.setOpenAIModelId(null)
+        } else if (provider === 'anthropic') {
+          modelManager.setAnthropicModelId(null)
+        }
+
+        errorMessage = `Stored ${provider} model is no longer available. Please select a new model using the VSCode command palette: "LM Proxy: Select ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API Model"`
+      } else {
+        // Direct model ID was not found
+        errorMessage = `Model "${selectedModelId}" not found. It may have been removed or is not available. Please check available models.`
+      }
+
+      logger.warn(errorMessage)
+      throw new Error(errorMessage)
     }
 
     // Return model as-is if found

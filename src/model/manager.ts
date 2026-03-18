@@ -9,32 +9,122 @@ import { logger } from '../utils/logger'
 class ModelManager {
   // VSCode ExtensionContext(for global state)
   private extensionContext: vscode.ExtensionContext | null = null
+
+  /**
+   * Validate and restore a model ID from globalState
+   * @param key The globalState key
+   * @param modelId The model ID to validate
+   * @param setter The setter function to call if valid
+   */
+  private async validateAndRestoreModelId(
+    key: string,
+    modelId: string,
+    setter: (id: string | null) => void,
+  ): Promise<boolean> {
+    try {
+      // Check if model still exists
+      const [model] = await vscode.lm.selectChatModels({ id: modelId })
+
+      if (model) {
+        // Model exists, restore it
+        setter(modelId)
+        logger.debug(`Restored model ${key}: ${modelId}`)
+        return true
+      }
+
+      // Model not found, clear stale ID
+      logger.warn(
+        `Stored model ID "${modelId}" (${key}) is no longer available. Clearing selection.`,
+      )
+      setter(null)
+      return false
+    } catch (error) {
+      // Error during validation, clear stale ID
+      logger.warn(
+        `Error validating model ID "${modelId}" (${key}): ${(error as Error).message}. Clearing selection.`,
+      )
+      setter(null)
+      return false
+    }
+  }
+
   /**
    * Set ExtensionContext(for using global state)
+   * Now async to validate stored model IDs at startup
    */
-  public setExtensionContext(context: vscode.ExtensionContext) {
+  public async setExtensionContext(
+    context: vscode.ExtensionContext,
+  ): Promise<void> {
     this.extensionContext = context
-    // Restore saved model information at startup if available
-    const savedOpenAIModelId = context.globalState.get<string>('openaiModelId')
-    if (savedOpenAIModelId) {
-      this.openaiModelId = savedOpenAIModelId
-    }
-    const savedAnthropicModelId =
-      context.globalState.get<string>('anthropicModelId')
-    if (savedAnthropicModelId) {
-      this.anthropicModelId = savedAnthropicModelId
-    }
-    const savedClaudeCodeBackgroundModelId = context.globalState.get<string>(
-      'claudeCodeBackgroundModelId',
-    )
-    if (savedClaudeCodeBackgroundModelId) {
-      this.claudeCodeBackgroundModelId = savedClaudeCodeBackgroundModelId
-    }
-    const savedClaudeCodeThinkingModelId = context.globalState.get<string>(
-      'claudeCodeThinkingModelId',
-    )
-    if (savedClaudeCodeThinkingModelId) {
-      this.claudeCodeThinkingModelId = savedClaudeCodeThinkingModelId
+
+    // Validate and restore saved model IDs
+    const results = await Promise.allSettled([
+      // OpenAI model
+      (async () => {
+        const savedOpenAIModelId =
+          context.globalState.get<string>('openaiModelId')
+        if (savedOpenAIModelId) {
+          return this.validateAndRestoreModelId(
+            'openaiModelId',
+            savedOpenAIModelId,
+            id => this.setOpenAIModelId(id),
+          )
+        }
+        return false
+      })(),
+
+      // Anthropic model
+      (async () => {
+        const savedAnthropicModelId =
+          context.globalState.get<string>('anthropicModelId')
+        if (savedAnthropicModelId) {
+          return this.validateAndRestoreModelId(
+            'anthropicModelId',
+            savedAnthropicModelId,
+            id => this.setAnthropicModelId(id),
+          )
+        }
+        return false
+      })(),
+
+      // Claude Code Background model
+      (async () => {
+        const savedClaudeCodeBackgroundModelId =
+          context.globalState.get<string>('claudeCodeBackgroundModelId')
+        if (savedClaudeCodeBackgroundModelId) {
+          return this.validateAndRestoreModelId(
+            'claudeCodeBackgroundModelId',
+            savedClaudeCodeBackgroundModelId,
+            id => this.setClaudeCodeBackgroundModelId(id),
+          )
+        }
+        return false
+      })(),
+
+      // Claude Code Thinking model
+      (async () => {
+        const savedClaudeCodeThinkingModelId = context.globalState.get<string>(
+          'claudeCodeThinkingModelId',
+        )
+        if (savedClaudeCodeThinkingModelId) {
+          return this.validateAndRestoreModelId(
+            'claudeCodeThinkingModelId',
+            savedClaudeCodeThinkingModelId,
+            id => this.setClaudeCodeThinkingModelId(id),
+          )
+        }
+        return false
+      })(),
+    ])
+
+    // Log summary of restored models
+    const restored = results.filter(
+      r => r.status === 'fulfilled' && r.value === true,
+    ).length
+    const total = results.filter(r => r.status === 'fulfilled').length
+
+    if (restored > 0) {
+      logger.info(`Restored ${restored}/${total} stored model ID(s)`)
     }
   }
   // Currently selected OpenAI model ID
@@ -234,15 +324,15 @@ class ModelManager {
 
   /**
    * Set model ID directly
-   * @param modelId Model ID to set
+   * @param modelId Model ID to set, or null to clear
    */
-  public setOpenAIModelId(modelId: string): void {
+  public setOpenAIModelId(modelId: string | null): void {
     this.openaiModelId = modelId
-    // Persist
+    // Persist (undefined clears the value in globalState)
     if (this.extensionContext) {
       this.extensionContext.globalState.update(
         'openaiModelId',
-        this.openaiModelId,
+        modelId ?? undefined,
       )
     }
     // Fire OpenAI model change event
@@ -251,14 +341,15 @@ class ModelManager {
 
   /**
    * Currently selected Anthropic model ID set and save
+   * @param modelId Model ID to set, or null to clear
    */
-  public setAnthropicModelId(modelId: string): void {
+  public setAnthropicModelId(modelId: string | null): void {
     this.anthropicModelId = modelId
-    // Persist
+    // Persist (undefined clears the value in globalState)
     if (this.extensionContext) {
       this.extensionContext.globalState.update(
         'anthropicModelId',
-        this.anthropicModelId,
+        modelId ?? undefined,
       )
     }
     // Fire event if needed
@@ -267,13 +358,14 @@ class ModelManager {
 
   /**
    * Claude Code Background Model ID set and save
+   * @param modelId Model ID to set, or null to clear
    */
-  public setClaudeCodeBackgroundModelId(modelId: string): void {
+  public setClaudeCodeBackgroundModelId(modelId: string | null): void {
     this.claudeCodeBackgroundModelId = modelId
     if (this.extensionContext) {
       this.extensionContext.globalState.update(
         'claudeCodeBackgroundModelId',
-        this.claudeCodeBackgroundModelId,
+        modelId ?? undefined,
       )
     }
     this._onDidChangeClaudeCodeBackgroundModelId.fire()
@@ -281,13 +373,14 @@ class ModelManager {
 
   /**
    * Claude Code Thinking Model ID set and save
+   * @param modelId Model ID to set, or null to clear
    */
-  public setClaudeCodeThinkingModelId(modelId: string): void {
+  public setClaudeCodeThinkingModelId(modelId: string | null): void {
     this.claudeCodeThinkingModelId = modelId
     if (this.extensionContext) {
       this.extensionContext.globalState.update(
         'claudeCodeThinkingModelId',
-        this.claudeCodeThinkingModelId,
+        modelId ?? undefined,
       )
     }
     this._onDidChangeClaudeCodeThinkingModelId.fire()
